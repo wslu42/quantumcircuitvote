@@ -54,13 +54,10 @@
   firebase.initializeApp(window.FIREBASE_CONFIG);
   const db = firebase.database();
 
-  // 宣告題目型別（預設 H），供投票鎖與畫面切換使用
-  let questionType = 'H';
-
   // ====== 重複投票開關（主持端控制，學生端同步） ======
   let allowMultiple = false; // 是否允許重複投票（預設否）
   function watchConfig() {
-    db.ref('/sessions/' + SESSION + '/config/allowMultiple').on('value', snap => {
+    db.ref(`/sessions/${SESSION}/config/allowMultiple`).on('value', snap => {
       allowMultiple = !!snap.val();
       try { updateButtons(); } catch(_) {}
       try { updateModeBadge(); } catch(_) {}
@@ -68,7 +65,7 @@
     });
   }
   function setAllowMultiple(v){
-    return db.ref('/sessions/' + SESSION + '/config/allowMultiple').set(!!v);
+    return db.ref(`/sessions/${SESSION}/config/allowMultiple`).set(!!v);
   }
 
   const $ = sel => document.querySelector(sel);
@@ -81,20 +78,18 @@
     return n;
   };
 
-  function voteKey(type){
-    return 'quantum-vote:' + SESSION + ':' + (type || questionType || 'H');
-  }:${(type || questionType || 'H')}`; }
+  function voteKey(type){ return `quantum-vote:${SESSION}:${(type || questionType || 'H')}`; }
   const hasVoted = () => !allowMultiple && localStorage.getItem(voteKey()) === '1';
   const markVoted = () => localStorage.setItem(voteKey(), '1');
   const clearVotes = () => { localStorage.removeItem(voteKey('H')); localStorage.removeItem(voteKey('BELL')); };
 
   async function castVote(key) {
-    const ref = db.ref('/sessions/' + SESSION + '/counts/' + key);
+    const ref = db.ref(`/sessions/${SESSION}/counts/${key}`);
     await ref.transaction(v => (v||0) + 1);
   }
 
   async function resetSession() {
-    const ref = db.ref('/sessions/' + SESSION + '/counts');
+    const ref = db.ref(`/sessions/${SESSION}/counts`);
     const snap = await ref.get();
     const updates = {};
     snap.forEach(child => { updates[child.key] = null; });
@@ -103,7 +98,7 @@
   }
 
   function onCounts(cb) {
-    db.ref('/sessions/' + SESSION + '/counts').on('value', snap => cb(snap.val() || {}));
+    db.ref(`/sessions/${SESSION}/counts`).on('value', snap => cb(snap.val() || {}));
   }
 
   const app = $('#app');
@@ -115,7 +110,7 @@
   function renderStudent() {
     const title = el('div', {}, [
       el('div', {class:'pill', id:'modeBadge'}, [ '模式：學生｜一機一票' ]),
-      el('h2', {}, [ '場次：' + SESSION ])
+      el('h2', {}, [ `場次：${SESSION}` ])
     ]);
 
     const hPanel = el('div', {class:'col card', id:'panel-h'}, [
@@ -167,15 +162,15 @@
   function updateButtons() {
     const disabled = hasVoted();
     ['0','1','00','11','01','10'].forEach(k => {
-      const btn = document.getElementById('btn-' + k);
+      const btn = document.getElementById(`btn-${k}`);
       if (btn) btn.disabled = disabled;
     });
   }
 
   function renderHost() {
     const title = el('div', {}, [
-      el('div', {class:'pill'}, [ '模式：主持人' ]),
-      el('h2', {}, [ '場次：' + SESSION ]),
+      el('div', {class:'pill'}, [ `模式：主持人` ]),
+      el('h2', {}, [ `場次：${SESSION}` ]),
       el('div', {class:'muted'}, [ '即時統計與控制選項。' ])
     ]);
 
@@ -190,14 +185,14 @@
     const board = el('div', {class:'row'});
 
     function drawBars(counts, keys, titleText) {
-      const total = keys.reduce(function(s,k){ return s + (counts[k] || 0); }, 0);
-      const wrap = el('div', {class:'col card'}, [ el('h3', {}, [titleText, ' ', el('span',{class:'muted'},['（合計 ' + total + ' ）']) ]) ]);
-      keys.forEach(function(k){
+      const total = keys.reduce((s,k)=>s+(counts[k]||0), 0);
+      const wrap = el('div', {class:'col card'}, [ el('h3', {}, [titleText, ' ', el('span',{class:'muted'},[`（合計 ${total} ）`]) ]) ]);
+      keys.forEach(k => {
         const v = counts[k] || 0;
         const p = total ? Math.round(v*100/total) : 0;
         const bar = el('div', {class:'bar', style:'margin:8px 0;'}, [
-          el('div', {class:'fill', style:'width:' + p + '%;'}),
-          el('div', {class:'bar-label'}, [ k + ' — ' + v + '（' + p + '%）' ])
+          el('div', {class:'fill', style:`width:${p}%;`}),
+          el('div', {class:'bar-label'}, [ `${k} — ${v}（${p}%）` ])
         ]);
         wrap.appendChild(bar);
       });
@@ -239,8 +234,9 @@
     badge.textContent = allowMultiple ? '模式：學生｜允許重複投票' : '模式：學生｜一機一票';
   }
 // ====== 題目型別（H | BELL）：主持端控制，學生端同步 ======
+  let questionType = 'H';
   function watchQuestionType() {
-    db.ref('/sessions/' + SESSION + '/config/questionType').on('value', snap => {
+    db.ref(`/sessions/${SESSION}/config/questionType`).on('value', snap => {
       questionType = (snap.val() || 'H').toUpperCase();
       applyQuestionTypeVisibility();
       updateQuestionPills();
@@ -248,29 +244,7 @@
     });
   }
   function setQuestionType(t){
-    t = (t || 'H').toUpperCase();
-    const cfgRef = db.ref('/sessions/' + SESSION + '/config/questionType');
-    const countsRef = db.ref('/sessions/' + SESSION + '/counts');
-    return cfgRef.set(t).then(async ()=>{
-      const updates = {};
-      if (t === 'H') {
-        updates['0']  = 0;
-        updates['1']  = 0;
-        updates['00'] = null;
-        updates['11'] = null;
-        updates['01'] = null;
-        updates['10'] = null;
-      } else { // BELL
-        updates['00'] = 0;
-        updates['11'] = 0;
-        updates['01'] = 0;
-        updates['10'] = 0;
-        updates['0']  = null;
-        updates['1']  = null;
-      }
-      await countsRef.update(updates);
-    });
-  
+    return db.ref(`/sessions/${SESSION}/config/questionType`).set(t);
   }
 
   // 題目顯示控制（只顯示 H 或 Bell）
