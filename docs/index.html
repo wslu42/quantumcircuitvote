@@ -78,10 +78,10 @@
     return n;
   };
 
-  const VOTE_KEY = `quantum-vote:${SESSION}`;
-  const hasVoted = () => !allowMultiple && localStorage.getItem(VOTE_KEY) === '1';
-  const markVoted = () => localStorage.setItem(VOTE_KEY, '1');
-  const clearVotes = () => localStorage.removeItem(VOTE_KEY);
+  function voteKey(type){ return `quantum-vote:${SESSION}:${(type || questionType || 'H')}`; }
+  const hasVoted = () => !allowMultiple && localStorage.getItem(voteKey()) === '1';
+  const markVoted = () => localStorage.setItem(voteKey(), '1');
+  const clearVotes = () => { localStorage.removeItem(voteKey('H')); localStorage.removeItem(voteKey('BELL')); };
 
   async function castVote(key) {
     const ref = db.ref(`/sessions/${SESSION}/counts/${key}`);
@@ -102,6 +102,8 @@
   }
 
   const app = $('#app');
+  // 啟動時監看主持端設定與題目
+  // questionType 已在上方宣告
   watchConfig();
   watchQuestionType();
 
@@ -238,6 +240,7 @@
       questionType = (snap.val() || 'H').toUpperCase();
       applyQuestionTypeVisibility();
       updateQuestionPills();
+      try { updateButtons(); } catch(_) {}
     });
   }
   function setQuestionType(t){
