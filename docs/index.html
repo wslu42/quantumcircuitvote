@@ -81,6 +81,22 @@
   firebase.initializeApp(window.FIREBASE_CONFIG);
   const db = firebase.database();
 
+  // ====== 重複投票開關（主持端控制，學生端同步） ======
+let ALLOW_MULTI = false; // 預設一機一票
+
+function watchConfig() {
+  db.ref(`/sessions/${SESSION}/config/allowMultiple`).on('value', snap => {
+    ALLOW_MULTI = !!snap.val();
+    try { updateButtons(); } catch(_) {}
+    try { updateModeBadge(); } catch(_) {}
+    try { updateHostToggleLabel(); } catch(_) {}
+  });
+}
+function setAllowMultiple(v){
+  return db.ref(`/sessions/${SESSION}/config/allowMultiple`).set(!!v);
+}
+
+
   // 資料結構：/sessions/{SESSION}/counts/{key} -> number
   // 例如 H：key in {"0","1"}；Bell：key in {"00","11","01","10"}
 
@@ -125,10 +141,13 @@
 
   // === 4) UI ===
   const app = $('#app');
+  // 啟動時監看主持端設定
+  watchConfig();
+
 
   function renderStudent() {
     const title = el('div', {}, [
-      el('div', {class:'pill'}, [ `模式：學生` ]),
+      el('div', {class:'pill', id:'modeBadge'}, [ '模式：學生｜一機一票' ]),
       el('h2', {}, [ `場次：${SESSION}` ])
     ]);
 
@@ -165,19 +184,19 @@
   }
 
   async function voteOnce(key) {
-    if (hasVoted()) { alert('本機已送出過一次。'); return; }
-    try {
+  if (!ALLOW_MULTI && hasVoted()) { alert('本機已送出過一次。'); return; }
+  try {
       await castVote(key);
-      markVoted();
+      if (!ALLOW_MULTI) { markVoted(); }
       updateButtons();
       alert('已送出！');
-    } catch (e) {
+  } catch (e) {
       console.error(e); alert('送出失敗，請再試一次或通知老師。');
-    }
+  }
   }
 
   function updateButtons() {
-    const disabled = hasVoted();
+    const disabled = (!ALLOW_MULTI) && hasVoted();
     ['0','1','00','11','01','10'].forEach(k => {
       const btn = document.getElementById(`btn-${k}`);
       if (btn) btn.disabled = disabled;
@@ -190,8 +209,14 @@
       el('h2', {}, [ `場次：${SESSION}` ]),
       el('div', {class:'muted'}, [ '即時統計。右上可重置本場次（清零）。' ])
     ]);
+    updateHostToggleLabel();
 
     const resetBtn = el('button', {class:'big-btn', onclick: async ()=>{ if(confirm('清空本場次所有票數？')) await resetSession(); }}, ['重置本場次']);
+    // 允許重複投票的切換鈕（寫入 /config/allowMultiple）
+    const toggleBtn = el('button', {
+    class:'big-btn', id:'toggle-multi', style:'margin-left:12px',
+    onclick: async ()=>{ await setAllowMultiple(!ALLOW_MULTI); }
+    }, ['切換：允許重複投票']);
 
     const board = el('div', {class:'row'});
 
@@ -213,6 +238,7 @@
     app.innerHTML = '';
     app.appendChild(title);
     app.appendChild(resetBtn);
+    app.appendChild(toggleBtn);
     app.appendChild(board);
 
     onCounts(counts => {
@@ -225,6 +251,19 @@
   }
 
   if (ROLE === 'host') renderHost(); else renderStudent();
+  function updateHostToggleLabel(){
+  const b = document.getElementById('toggle-multi');
+  if (!b) return;
+  b.textContent = ALLOW_MULTI
+    ? '目前：允許重複投票（點我改為一機一票）'
+    : '目前：一機一票（點我改為允許重複投票）';
+  }
+  function updateModeBadge(){
+  const badge = document.getElementById('modeBadge');
+  if (!badge) return;
+  badge.textContent = ALLOW_MULTI ? '模式：學生｜允許重複投票' : '模式：學生｜一機一票';
+  }
+
 </script>
 
 <!-- ===== Firebase Realtime Database 規則（示例，請視安全需求調整） =====
