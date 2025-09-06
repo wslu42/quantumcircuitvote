@@ -4,48 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>量子 1‑Shot 投票 & 即時統計 (H / Bell)</title>
-  <!-- ===== 說明 =====
-    這是一個單檔版的「1-shot 即時投票」網頁：
-    - 以 URL 參數 ?role=host 進入主持人/看板模式（即時統計畫面）
-    - 以 URL 參數 ?role=student 進入學生模式（單次作答、巨大按鈕）
-    - 以 URL 參數 ?session=ABC 指定場次代碼（同一堂課用同一個 session）
-
-    實作採用 Firebase Realtime Database：
-    - 你需要替換下方 window.FIREBASE_CONFIG，填入自己的 Firebase 專案設定。
-    - Database 規則請在課堂前設定（範例規則附在最下方註解）。
-
-    操作流程（H gate 範例）
-    1) 老師：開 host 視圖，例如 https://你的域名/index.html?role=host&session=H-coin
-    2) 學生：掃投影上的 QR，打開 https://你的域名/index.html?role=student&session=H-coin
-       - 每位學生在 IBM Quantum Composer 跑 1-shot 後，
-         點擊自己觀察到的輸出（0 或 1）的巨大按鈕送出。
-       - 系統限制「一機一票」（以 localStorage 簽名；可配合課堂規範）。
-    3) 主持人畫面即時顯示 0/1 數量與比例長條圖。
-
-    Bell 狀態範例
-    - 發給配對好的 A/B 學生同一個 session，例如 session=BELL-1。
-    - 兩人只需讓其中一人送出聯合結果（00 / 11 / 01 / 10）。
-      （或開四鍵學生介面、口頭協作決定勾選哪個）
-
-    你也可以用同一份檔案進行多輪：每一輪換一個 session 代碼即可。
-  ===== -->
   <style>
     body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial; margin: 0; padding: 16px; }
     .container { max-width: 900px; margin: 0 auto; }
     h1 { margin: 0 0 8px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
-    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .card { border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.06); margin-bottom: 16px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
     .col { flex: 1 1 280px; }
     .big-btn { font-size: 28px; padding: 20px; width: 100%; border-radius: 16px; border: 1px solid #d1d5db; cursor: pointer; }
     .big-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f3f4f6; }
+    .pill { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #f3f4f6; margin: 8px 0; text-align: center; }
     .muted { color: #6b7280; }
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    canvas { width: 100%; height: 300px; border: 1px dashed #e5e7eb; border-radius: 8px; }
     .bar { height: 28px; background: #e5e7eb; border-radius: 999px; position: relative; overflow: hidden; }
     .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #60a5fa; }
     .bar-label { position: absolute; left: 12px; top: 4px; font-weight: 600; }
+    #toggle-multi { display:block; width:100%; margin:12px 0; }
   </style>
 </head>
 <body>
@@ -53,48 +28,44 @@
   <h1>量子 1‑Shot 投票 & 即時統計</h1>
   <div class="muted">用於 H 門（0/1）與 Bell（00/11/01/10）一鍵回報、班級即時統計。</div>
   <hr />
-
   <div id="app" class="card"></div>
 </div>
 
 <script>
-  // === 1) URL 參數解析 ===
   const params = new URLSearchParams(location.search);
-  const ROLE = params.get('role') || 'student'; // 'host' | 'student'
+  const ROLE = params.get('role') || 'student';
   const SESSION = params.get('session') || 'DEMO';
 
-  // === 2) Firebase 設定（請替換） ===
   window.FIREBASE_CONFIG = {
-
+    apiKey: "AIzaSyAZ_L6ru1tKWsB68pzwln-K7lB4xvMIpYE",
+    authDomain: "quantumcircuitvote-b4d42.firebaseapp.com",
+    databaseURL: "https://quantumcircuitvote-b4d42-default-rtdb.firebaseio.com",
+    projectId: "quantumcircuitvote-b4d42",
+    storageBucket: "quantumcircuitvote-b4d42.firebasestorage.app",
+    messagingSenderId: "886833352301",
+    appId: "1:886833352301:web:8ffb9428151495dfaaf964",
   };
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
-  // === 3) 初始化 Firebase ===
   firebase.initializeApp(window.FIREBASE_CONFIG);
   const db = firebase.database();
 
   // ====== 重複投票開關（主持端控制，學生端同步） ======
-let ALLOW_MULTI = false; // 預設一機一票
+  let allowMultiple = false; // 是否允許重複投票（預設否）
+  function watchConfig() {
+    db.ref(`/sessions/${SESSION}/config/allowMultiple`).on('value', snap => {
+      allowMultiple = !!snap.val();
+      try { updateButtons(); } catch(_) {}
+      try { updateModeBadge(); } catch(_) {}
+      try { updateHostToggleLabel(); } catch(_) {}
+    });
+  }
+  function setAllowMultiple(v){
+    return db.ref(`/sessions/${SESSION}/config/allowMultiple`).set(!!v);
+  }
 
-function watchConfig() {
-  db.ref(`/sessions/${SESSION}/config/allowMultiple`).on('value', snap => {
-    ALLOW_MULTI = !!snap.val();
-    try { updateButtons(); } catch(_) {}
-    try { updateModeBadge(); } catch(_) {}
-    try { updateHostToggleLabel(); } catch(_) {}
-  });
-}
-function setAllowMultiple(v){
-  return db.ref(`/sessions/${SESSION}/config/allowMultiple`).set(!!v);
-}
-
-
-  // 資料結構：/sessions/{SESSION}/counts/{key} -> number
-  // 例如 H：key in {"0","1"}；Bell：key in {"00","11","01","10"}
-
-  // 小工具
   const $ = sel => document.querySelector(sel);
   const el = (tag, attrs={}, children=[]) => {
     const n = document.createElement(tag);
@@ -105,39 +76,31 @@ function setAllowMultiple(v){
     return n;
   };
 
-  // 一機一票（localStorage 簽名）
   const VOTE_KEY = `quantum-vote:${SESSION}`;
-  const hasVoted = () => localStorage.getItem(VOTE_KEY) === '1';
+  const hasVoted = () => !allowMultiple && localStorage.getItem(VOTE_KEY) === '1';
   const markVoted = () => localStorage.setItem(VOTE_KEY, '1');
   const clearVotes = () => localStorage.removeItem(VOTE_KEY);
 
-  // 寫票：原子加 1
   async function castVote(key) {
     const ref = db.ref(`/sessions/${SESSION}/counts/${key}`);
     await ref.transaction(v => (v||0) + 1);
   }
 
-  // 清場次（主持人功能）
   async function resetSession() {
     const ref = db.ref(`/sessions/${SESSION}/counts`);
     const snap = await ref.get();
     const updates = {};
-    snap.forEach(child => { updates[child.key] = null; }); // 將每個 key 設為 null
+    snap.forEach(child => { updates[child.key] = null; });
     await ref.update(updates);
-    // 如果主持人在同一台機器也投過，順手清本機鎖
-    localStorage.removeItem(`quantum-vote:${SESSION}`);
+    clearVotes();
   }
 
-  // 讀取 counts 並即時更新
   function onCounts(cb) {
     db.ref(`/sessions/${SESSION}/counts`).on('value', snap => cb(snap.val() || {}));
   }
 
-  // === 4) UI ===
   const app = $('#app');
-  // 啟動時監看主持端設定
   watchConfig();
-
 
   function renderStudent() {
     const title = el('div', {}, [
@@ -145,7 +108,6 @@ function setAllowMultiple(v){
       el('h2', {}, [ `場次：${SESSION}` ])
     ]);
 
-    // 兩組版面：
     const hPanel = el('div', {class:'col card'}, [
       el('h3', {}, [ 'H 門：選擇你量到的結果（1 次）' ]),
       el('div', {class:'grid-2'}, [
@@ -165,7 +127,7 @@ function setAllowMultiple(v){
     ]);
 
     const tip = el('div', {class:'muted', style:'margin-top:8px'}, [
-      '系統會以本機瀏覽器限制單次作答；若誤觸需重送，請告知老師在主持人端重置此場次。'
+      '系統預設限制一機一票；老師可在主持人端切換「允許重複投票」模式。'
     ]);
 
     const wrapper = el('div', {class:'row'}, [ hPanel, bellPanel ]);
@@ -178,19 +140,19 @@ function setAllowMultiple(v){
   }
 
   async function voteOnce(key) {
-  if (!ALLOW_MULTI && hasVoted()) { alert('本機已送出過一次。'); return; }
-  try {
+    if (hasVoted()) { alert('本機已送出過一次。'); return; }
+    try {
       await castVote(key);
-      if (!ALLOW_MULTI) { markVoted(); }
+      if (!allowMultiple) markVoted();
       updateButtons();
       alert('已送出！');
-  } catch (e) {
+    } catch (e) {
       console.error(e); alert('送出失敗，請再試一次或通知老師。');
-  }
+    }
   }
 
   function updateButtons() {
-    const disabled = (!ALLOW_MULTI) && hasVoted();
+    const disabled = hasVoted();
     ['0','1','00','11','01','10'].forEach(k => {
       const btn = document.getElementById(`btn-${k}`);
       if (btn) btn.disabled = disabled;
@@ -201,16 +163,14 @@ function setAllowMultiple(v){
     const title = el('div', {}, [
       el('div', {class:'pill'}, [ `模式：主持人` ]),
       el('h2', {}, [ `場次：${SESSION}` ]),
-      el('div', {class:'muted'}, [ '即時統計。右上可重置本場次（清零）。' ])
+      el('div', {class:'muted'}, [ '即時統計與控制選項。' ])
     ]);
-    updateHostToggleLabel();
 
-    const resetBtn = el('button', {class:'big-btn', onclick: async ()=>{ if(confirm('清空本場次所有票數？')) await resetSession(); }}, ['重置本場次']);
-    // 允許重複投票的切換鈕（寫入 /config/allowMultiple）
-    const toggleBtn = el('button', {
-    class:'big-btn', id:'toggle-multi', style:'margin-left:12px',
-    onclick: async ()=>{ await setAllowMultiple(!ALLOW_MULTI); }
-    }, ['切換：允許重複投票']);
+    const resetBtn = el('button', {class:'big-btn', style:'margin:8px 0', onclick: async ()=>{ if(confirm('清空本場次所有票數？')) await resetSession(); }}, ['重置本場次']);
+
+    const toggleBtn = el('button', {class:'big-btn', id:'toggle-multi', onclick: async ()=>{
+      await setAllowMultiple(!allowMultiple);
+    }}, ['切換：允許重複投票']);
 
     const board = el('div', {class:'row'});
 
@@ -237,50 +197,27 @@ function setAllowMultiple(v){
 
     onCounts(counts => {
       board.innerHTML = '';
-      // H 視圖
       board.appendChild(drawBars(counts, ['0','1'], 'H 門：0/1 分佈'));
-      // Bell 視圖
       board.appendChild(drawBars(counts, ['00','11','01','10'], 'Bell：聯合輸出分佈'));
     });
+
+    updateHostToggleLabel();
   }
 
   if (ROLE === 'host') renderHost(); else renderStudent();
+
   function updateHostToggleLabel(){
-  const b = document.getElementById('toggle-multi');
-  if (!b) return;
-  b.textContent = ALLOW_MULTI
-    ? '目前：允許重複投票（點我改為一機一票）'
-    : '目前：一機一票（點我改為允許重複投票）';
+    const b = document.getElementById('toggle-multi');
+    if (!b) return;
+    b.textContent = allowMultiple
+      ? '目前：允許重複投票（點我改為一機一票）'
+      : '目前：一機一票（點我改為允許重複投票）';
   }
   function updateModeBadge(){
-  const badge = document.getElementById('modeBadge');
-  if (!badge) return;
-  badge.textContent = ALLOW_MULTI ? '模式：學生｜允許重複投票' : '模式：學生｜一機一票';
+    const badge = document.getElementById('modeBadge');
+    if (!badge) return;
+    badge.textContent = allowMultiple ? '模式：學生｜允許重複投票' : '模式：學生｜一機一票';
   }
-
 </script>
-
-<!-- ===== Firebase Realtime Database 規則（示例，請視安全需求調整） =====
-{
-  "rules": {
-    "sessions": {
-      "$session": {
-        ".read": true,
-        "counts": {
-          "$key": {
-            ".write": true,              // 課堂公開投票，允許匿名寫入指定 path
-            ".validate": "newData.isNumber() && newData.val() >= 0"
-          }
-        }
-      }
-    }
-  }
-}
-註：正式課程建議額外加入簡單防刷：
-- 在客戶端用 localStorage 鎖一票（已實作）
-- 於規則層做節流：限制每個 IP 或以 Firebase Auth 匿名登入後，限制 UID 可寫入次數（進階）
-- 主持端可視情況重置（本檔已提供 resetSession）
--->
-
 </body>
 </html>
