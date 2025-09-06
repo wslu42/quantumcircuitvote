@@ -20,7 +20,9 @@
     .bar { height: 28px; background: #e5e7eb; border-radius: 999px; position: relative; overflow: hidden; }
     .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #60a5fa; }
     .bar-label { position: absolute; left: 12px; top: 4px; font-weight: 600; }
-    #toggle-multi { display:block; width:100%; margin:12px 0; }
+    #toggle-multi { display:inline-flex; width:auto; margin:0; padding:10px 14px; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; font-weight:600; }
+    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+    .pill-btn { display:inline-flex; align-items:center; padding:10px 14px; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer; font-weight:600; }
   </style>
 </head>
 <body>
@@ -76,10 +78,10 @@
     return n;
   };
 
-  const VOTE_KEY = `quantum-vote:${SESSION}`;
-  const hasVoted = () => !allowMultiple && localStorage.getItem(VOTE_KEY) === '1';
-  const markVoted = () => localStorage.setItem(VOTE_KEY, '1');
-  const clearVotes = () => localStorage.removeItem(VOTE_KEY);
+  function voteKey(type){ return `quantum-vote:${SESSION}:${(type || questionType || 'H')}`; }
+  const hasVoted = () => !allowMultiple && localStorage.getItem(voteKey()) === '1';
+  const markVoted = () => localStorage.setItem(voteKey(), '1');
+  const clearVotes = () => { localStorage.removeItem(voteKey('H')); localStorage.removeItem(voteKey('BELL')); };
 
   async function castVote(key) {
     const ref = db.ref(`/sessions/${SESSION}/counts/${key}`);
@@ -100,7 +102,10 @@
   }
 
   const app = $('#app');
+  // 啟動時監看主持端設定與題目
+  // questionType 已在上方宣告
   watchConfig();
+  watchQuestionType();
 
   function renderStudent() {
     const title = el('div', {}, [
@@ -108,7 +113,7 @@
       el('h2', {}, [ `場次：${SESSION}` ])
     ]);
 
-    const hPanel = el('div', {class:'col card'}, [
+    const hPanel = el('div', {class:'col card', id:'panel-h'}, [
       el('h3', {}, [ 'H 門：選擇你量到的結果（1 次）' ]),
       el('div', {class:'grid-2'}, [
         el('button', {class:'big-btn', id:'btn-0', onclick: async ()=>voteOnce('0')}, ['0']),
@@ -116,7 +121,7 @@
       ])
     ]);
 
-    const bellPanel = el('div', {class:'col card'}, [
+    const bellPanel = el('div', {class:'col card', id:'panel-bell'}, [
       el('h3', {}, [ 'Bell：請其中 1 人回報聯合結果（1 次）' ]),
       el('div', {class:'grid-4'}, [
         el('button', {class:'big-btn', id:'btn-00', onclick: async ()=>voteOnce('00')}, ['00']),
@@ -135,6 +140,9 @@
     app.appendChild(title);
     app.appendChild(wrapper);
     app.appendChild(tip);
+
+    // 按雲端設定顯示單題（H 或 Bell）
+    applyQuestionTypeVisibility();
 
     updateButtons();
   }
@@ -168,10 +176,12 @@
 
     const resetBtn = el('button', {class:'big-btn', style:'margin:8px 0', onclick: async ()=>{ if(confirm('清空本場次所有票數？')) await resetSession(); }}, ['重置本場次']);
 
-    const toggleBtn = el('button', {class:'big-btn', id:'toggle-multi', onclick: async ()=>{
+    const toggleBtn = el('button', {class:'pill-btn', id:'toggle-multi', onclick: async ()=>{
       await setAllowMultiple(!allowMultiple);
     }}, ['切換：允許重複投票']);
 
+    const qHBtn    = el('button', {class:'pill-btn', id:'q-h',    onclick: ()=> setQuestionType('H')},    ['題目：H 門']);
+    const qBellBtn = el('button', {class:'pill-btn', id:'q-bell', onclick: ()=> setQuestionType('BELL')}, ['題目：Bell']);
     const board = el('div', {class:'row'});
 
     function drawBars(counts, keys, titleText) {
@@ -191,14 +201,19 @@
 
     app.innerHTML = '';
     app.appendChild(title);
-    app.appendChild(resetBtn);
-    app.appendChild(toggleBtn);
+    const controls = el('div', {class:'controls'}, [ resetBtn, toggleBtn, qHBtn, qBellBtn ]);
+    app.appendChild(controls);
     app.appendChild(board);
 
     onCounts(counts => {
       board.innerHTML = '';
-      board.appendChild(drawBars(counts, ['0','1'], 'H 門：0/1 分佈'));
-      board.appendChild(drawBars(counts, ['00','11','01','10'], 'Bell：聯合輸出分佈'));
+      const hDiv = drawBars(counts, ['0','1'], 'H 門：0/1 分佈');
+      hDiv.id = 'board-h';
+      const bDiv = drawBars(counts, ['00','11','01','10'], 'Bell：聯合輸出分佈');
+      bDiv.id = 'board-bell';
+      board.appendChild(hDiv);
+      board.appendChild(bDiv);
+      applyQuestionTypeVisibility();
     });
 
     updateHostToggleLabel();
@@ -217,6 +232,37 @@
     const badge = document.getElementById('modeBadge');
     if (!badge) return;
     badge.textContent = allowMultiple ? '模式：學生｜允許重複投票' : '模式：學生｜一機一票';
+  }
+// ====== 題目型別（H | BELL）：主持端控制，學生端同步 ======
+  let questionType = 'H';
+  function watchQuestionType() {
+    db.ref(`/sessions/${SESSION}/config/questionType`).on('value', snap => {
+      questionType = (snap.val() || 'H').toUpperCase();
+      applyQuestionTypeVisibility();
+      updateQuestionPills();
+      try { updateButtons(); } catch(_) {}
+    });
+  }
+  function setQuestionType(t){
+    return db.ref(`/sessions/${SESSION}/config/questionType`).set(t);
+  }
+
+  // 題目顯示控制（只顯示 H 或 Bell）
+  function applyQuestionTypeVisibility(){
+    const hp = document.getElementById('panel-h');
+    const bp = document.getElementById('panel-bell');
+    const hb = document.getElementById('board-h');
+    const bb = document.getElementById('board-bell');
+    if (hp) hp.style.display = (questionType === 'H') ? '' : 'none';
+    if (bp) bp.style.display = (questionType === 'BELL') ? '' : 'none';
+    if (hb) hb.style.display = (questionType === 'H') ? '' : 'none';
+    if (bb) bb.style.display = (questionType === 'BELL') ? '' : 'none';
+  }
+  function updateQuestionPills(){
+    const h = document.getElementById('q-h');
+    const b = document.getElementById('q-bell');
+    if (h) h.style.fontWeight = (questionType==='H' ? '700' : '400');
+    if (b) b.style.fontWeight = (questionType==='BELL' ? '700' : '400');
   }
 </script>
 </body>
