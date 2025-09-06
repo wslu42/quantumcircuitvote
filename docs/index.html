@@ -109,7 +109,13 @@
 
   // 清場次（主持人功能）
   async function resetSession() {
-    await db.ref(`/sessions/${SESSION}`).remove();
+    const ref = db.ref(`/sessions/${SESSION}/counts`);
+    const snap = await ref.get();
+    const updates = {};
+    snap.forEach(child => { updates[child.key] = null; }); // 將每個 key 設為 null
+    await ref.update(updates);
+    // 如果主持人在同一台機器也投過，順手清本機鎖
+    localStorage.removeItem(`quantum-vote:${SESSION}`);
   }
 
   // 讀取 counts 並即時更新
