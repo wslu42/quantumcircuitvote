@@ -3,9 +3,16 @@
     "sessions": {
       "$sessionId": {
         ".read": true,
-        ".write": true,
+        "experiment": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'"
+        },
+        "round": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'"
+        },
         "counts": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'",
           "$outcome": {
+            ".write": "(!data.exists() && newData.val() == 1) || (data.isNumber() && newData.val() == data.val() + 1)",
             ".validate": "newData.isNumber() && newData.val() >= 0"
           }
         }

@@ -24,7 +24,7 @@ export function subscribeSession(sessionId: string, listener: (session: Classroo
 
 export async function publishExperiment(sessionId: string, data: Omit<PublishedExperiment, 'updatedAt'>): Promise<string> {
   const roundId = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`
-  await set(sessionRef(sessionId), { experiment: { ...data, updatedAt: Date.now() }, round: { id: roundId, status: 'draft', allowMultiple: false }, counts: {} })
+  await update(sessionRef(sessionId), { experiment: { ...data, updatedAt: Date.now() }, round: { id: roundId, status: 'draft', allowMultiple: false }, counts: null })
   return roundId
 }
 

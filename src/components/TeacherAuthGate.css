@@ -1,0 +1,19 @@
+.auth-panel {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.teacher-session {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  width: min(1180px, calc(100% - 32px));
+  margin: 18px auto -24px;
+  color: #53605c;
+  font-size: 0.9rem;
+}
+
+.teacher-session button {
+  padding: 7px 11px;
+}

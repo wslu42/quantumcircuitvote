@@ -38,7 +38,7 @@ The production build is written to `docs/` for GitHub Pages compatibility. Fireb
 
 ## Current limitations
 
-- Host controls are not authenticated. The included database rules preserve prototype behavior and are not production security rules.
+- Author and host controls require Google sign-in as the configured teacher account. Google must be enabled in Firebase Authentication and the included Realtime Database rules must be published separately.
 - One-response enforcement uses browser storage and is not identity-based.
 - A session has one current experiment and one current round.
 - Outcome controls are limited to 1–8 classical bits.
