@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { outcomesFor } from '../circuit/outcomes'
 import { foundationsLesson } from './foundationsLesson'
-import { adjacentActivityId, createLessonRound, orderedActivities, reviewDistribution, submissionStorageKey, validateLesson, validateReflection } from './lessonUtils'
+import { adjacentActivityId, canSubmitToRound, createLessonRound, orderedActivities, reviewDistribution, submissionStorageKey, validateLesson, validateReflection } from './lessonUtils'
 
 const byId = (id: string) => foundationsLesson.activities.find((activity) => activity.id === id)!
 
@@ -62,6 +62,13 @@ describe('Quantum Circuit Foundations lesson', () => {
   })
 
   it('keys local submissions by session and round', () => expect(submissionStorageKey('CLASS', 'round-2')).toBe('quantum-vote:CLASS:round-2'))
+
+  it('allows submissions only to the active open round', () => {
+    const round = { ...createLessonRound('a1', 100, 'round-1'), status: 'open' as const }
+    expect(canSubmitToRound('round-1', round)).toBe(true)
+    expect(canSubmitToRound('round-2', round)).toBe(false)
+    expect(canSubmitToRound('round-1', { ...round, status: 'closed' })).toBe(false)
+  })
 
   it('validates short non-empty reflections', () => {
     expect(validateReflection('  Interesting result. ')).toBe('Interesting result.')

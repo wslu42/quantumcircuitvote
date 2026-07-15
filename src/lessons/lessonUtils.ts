@@ -20,6 +20,10 @@ export function submissionStorageKey(sessionId: string, roundId: string): string
   return `quantum-vote:${sessionId}:${roundId}`
 }
 
+export function canSubmitToRound(activeRoundId: string, round: LessonRound | null): boolean {
+  return !!round && round.id === activeRoundId && round.status === 'open'
+}
+
 export function validateReflection(text: string): string {
   const normalized = text.trim()
   if (!normalized) throw new Error('Reflection cannot be empty.')

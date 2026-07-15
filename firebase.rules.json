@@ -9,6 +9,29 @@
         "round": {
           ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'"
         },
+        "lesson": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'"
+        },
+        "activities": {
+          ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'"
+        },
+        "rounds": {
+          "$roundId": {
+            ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'",
+            "counts": {
+              "$outcome": {
+                ".write": "(!data.exists() && newData.val() == 1) || (data.isNumber() && newData.val() == data.val() + 1)",
+                ".validate": "newData.isNumber() && newData.val() >= 0"
+              }
+            }
+          }
+        },
+        "reflections": {
+          "$reflectionId": {
+            ".write": "!data.exists() && newData.hasChildren(['id', 'roundId', 'text', 'createdAt']) && root.child('sessions').child($sessionId).child('rounds').child(newData.child('roundId').val()).child('status').val() == 'revealed'",
+            ".validate": "newData.child('id').val() == $reflectionId && newData.child('roundId').isString() && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 280 && newData.child('createdAt').isNumber()"
+          }
+        },
         "counts": {
           ".write": "auth != null && auth.token.email_verified == true && auth.token.email == 'wslu42@gmail.com'",
           "$outcome": {
