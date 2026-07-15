@@ -1,27 +1,24 @@
 # Quantum Circuit Classroom
 
-An English-language classroom MVP for learning quantum circuits through reading, reconstruction, and group evidence. Teachers describe a circuit with a safe Qiskit-like DSL. Students read a static text or graphic diagram, rebuild it manually in IBM Quantum Composer, run one shot, and report the observed classical result. Hosts see the distribution update through Firebase Realtime Database.
+An English-language classroom lesson for learning quantum circuits through manual reconstruction and group evidence. The built-in **Quantum Circuit Foundations** sequence contains eleven ordered activities spanning initialization, deterministic gates, product-state statistics, composition, phase, and interference.
 
-## Routes
+Each student reads a static Text or Graphic circuit, rebuilds it in a blank IBM Quantum Composer, runs one shot, and reports the displayed classical bit string. Individual shots can be random; the class distribution exposes the quantum rule. After responses close, the instructor reveals the stored theoretical distribution and concept summary.
 
-Use a shared session query in the hash route:
+## Primary workflow
 
-- `#/author?session=DEMO` — author and publish a circuit.
-- `#/student?session=DEMO` — read the circuit and report one shot.
-- `#/host?session=DEMO` — open or close responses and view live counts.
+1. Open `#/author?session=DEMO`, sign in as the configured teacher, and load the Foundations lesson.
+2. Share `#/student?session=DEMO` with students.
+3. Move through the ordered activities, opening and closing one response round per activity.
+4. Reveal observed-versus-expected results, repeat activities as new rounds, or review preserved prior rounds.
+5. Optionally collect a short post-reveal reflection.
 
-## Circuit DSL
+The legacy `#/host` hash also opens the merged Instructor experience. The first activity is direct measurement of the initialized `|0⟩` state; Bell and arbitrary-circuit authoring are not part of this lesson.
 
-```python
-qc.h(0)
-qc.cx(0, 1)
-qc.measure(0, 0)
-qc.measure(1, 1)
-```
+## Circuit model and rendering
 
-Supported methods: `x`, `y`, `z`, `h`, `rx`, `ry`, `rz`, `cx`, `cz`, `swap`, `measure`, and `barrier`. Rotation angles are stored as text. This is not Python, does not install or execute Qiskit, and never evaluates the input.
+The lesson template is validated data built from the safe Qiskit-like DSL. Supported methods remain `x`, `y`, `z`, `h`, `rx`, `ry`, `rz`, `cx`, `cz`, `swap`, `measure`, and `barrier`. The parser never evaluates Python. `CircuitModel` remains the source of truth for the compact text renderer and lazy read-only SVG renderer.
 
-Text view is the default mobile-friendly rendering. Graphic view is a lazy-loaded, read-only SVG renderer built on the same internal model. No circuit data is copied into IBM Composer; manual reconstruction is an intentional learning activity.
+No circuit is copied into IBM Composer. OpenQASM, automatic import, simulation, drag-and-drop editing, and student circuit verification are intentionally absent.
 
 ## Development
 
@@ -34,22 +31,20 @@ npm run test
 npm run build
 ```
 
-The production build is written to `docs/` for GitHub Pages compatibility. Firebase configuration defaults to the legacy project and can be overridden with the variables in `.env.example`.
+Vite writes the production build to `docs/` for GitHub Pages. Firebase configuration can be overridden with `.env.example`.
 
 ## Current limitations
 
-- Author and host controls require Google sign-in as the configured teacher account. Google must be enabled in Firebase Authentication and the included Realtime Database rules must be published separately.
-- One-response enforcement uses browser storage and is not identity-based.
-- A session has one current experiment and one current round.
-- Outcome controls are limited to 1–8 classical bits.
-- The app does not simulate circuits or calculate ideal probabilities.
-- The app does not inspect or verify the circuit a student creates in IBM Quantum Composer.
+- Instructor controls require Google sign-in as `wslu42@gmail.com`; the Firebase provider, authorized domain, and Realtime Database rules must be deployed separately.
+- Students are anonymous. One-response enforcement uses browser storage and is not an identity or security boundary.
+- Expected distributions are curriculum data, not simulator output.
+- The app does not identify the cause of hardware deviations or inspect a student's Composer circuit.
+- The built-in lesson covers product states and interference; Bell-state curriculum is a future lesson.
 
-## Maintenance documentation
+## Documentation
 
+- [Foundations lesson](documentation/FOUNDATIONS_LESSON.md)
 - [Architecture](documentation/ARCHITECTURE.md)
+- [Firebase model and migration](documentation/FIREBASE.md)
 - [Circuit DSL](documentation/DSL.md)
-- [Firebase model](documentation/FIREBASE.md)
 - [Agent working notes](agent.md)
-
-The next safe increment is Firebase Authentication or a host capability token, followed by per-student response records, predictions, observations, and ideal-distribution comparison.

@@ -2,6 +2,8 @@
 
 The teacher-facing syntax resembles Qiskit method calls, but it is not Python and is never executed.
 
+The primary Foundations lesson stores this syntax as validated curriculum data. Students see only the rendered circuit by default and manually rebuild it in IBM Quantum Composer; the application does not expose OpenQASM or automatic import.
+
 ```python
 qc.h(0)
 qc.cx(0, 1)
@@ -20,3 +22,7 @@ qc.measure(1, 1)
 Rotation angles are preserved as text. Blank lines, full-line comments, and trailing `# comments` are accepted.
 
 Indices must be non-negative integers. Multi-qubit gates cannot use the same qubit twice. Unsupported syntax produces line-specific errors and is never ignored. Variables, loops, constructors, registers, conditionals, custom gates, `measure_all`, reset, controlled rotations, and arbitrary Python are outside the MVP.
+
+## Classical bit strings
+
+Expected-distribution keys and generated response buttons use the same fixed-width binary strings that students transcribe from IBM Composer. The application does not reverse strings. In Qiskit-style display order, the highest-index classical bit appears at the left; measurement calls such as `qc.measure(0, 0)` still map qubit 0 to classical bit 0.

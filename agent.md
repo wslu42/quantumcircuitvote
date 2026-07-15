@@ -4,7 +4,7 @@
 
 Replace the legacy single-file H/Bell voting proof of concept with an English-language Vite, React, and TypeScript classroom MVP. Teachers author read-only circuits using a small Qiskit-like DSL; students reconstruct those circuits in IBM Quantum Composer and report one observed classical result; hosts see live aggregate results.
 
-## Curriculum-alignment mission (in progress)
+## Curriculum-alignment mission (implemented)
 
 Make the primary product an ordered **Quantum Circuit Foundations** lesson rather than one arbitrary published circuit. The instructor advances a class through manual IBM Quantum Composer reconstruction, one-shot response collection, and observed-versus-expected review. Preserve the parser, renderers, Firebase live updates, English UI, responsive layout, and Google-protected teacher controls.
 
@@ -38,14 +38,14 @@ Legacy `experiment`, `round`, and `counts` nodes are left intact during migratio
 
 - [x] Create curriculum-alignment branch.
 - [x] Record the exact lesson sequence, schema, and non-goals.
-- [ ] Add validated lesson/activity/round domain models.
-- [ ] Add the built-in Foundations lesson and progression utilities.
-- [ ] Preserve round history and add active-round submission rules.
-- [ ] Build instructor lesson controls and prior-round review.
-- [ ] Build student reveal and optional reflection workflow.
-- [ ] Add observed-versus-expected calculations and comparison UI.
-- [ ] Update Firebase rules, architecture, and maintenance documentation.
-- [ ] Pass typecheck, lint, tests, production build, and browser validation.
+- [x] Add validated lesson/activity/round domain models.
+- [x] Add the built-in Foundations lesson and progression utilities.
+- [x] Preserve round history and add active-round submission rules.
+- [x] Build instructor lesson controls and prior-round review.
+- [x] Build student reveal and optional reflection workflow.
+- [x] Add observed-versus-expected calculations and comparison UI.
+- [x] Update Firebase rules, architecture, and maintenance documentation.
+- [x] Pass typecheck, lint, tests, production build, and browser validation.
 
 ### Explicit non-goals
 
@@ -58,7 +58,7 @@ The requested plan was referenced as `/mnt/data/quantumcircuitvote_codex_impleme
 ## Required workflow
 
 - Preserve the legacy baseline with tag `legacy-h-bell-v1` when practical.
-- Develop on `feat/circuit-classroom-mvp`.
+- Develop curriculum alignment on `feat/foundations-lesson-sequence`.
 - Keep the public interface in English.
 - Make focused, meaningful commits.
 - Keep architecture and maintenance documentation current.
@@ -68,7 +68,7 @@ The requested plan was referenced as `/mnt/data/quantumcircuitvote_codex_impleme
 
 Supported DSL methods: `x`, `y`, `z`, `h`, `rx`, `ry`, `rz`, `cx`, `cz`, `swap`, `measure`, and `barrier`.
 
-The application must not execute Python and must not expose OpenQASM, circuit copy/import, drag-and-drop editing, quantum simulation, authentication, predictions, observations, or multi-experiment libraries in this MVP.
+The application must not execute Python and must not expose OpenQASM, circuit copy/import, drag-and-drop editing, quantum simulation, student accounts, scoring, or automatic circuit verification. Google authentication protects instructor controls only.
 
 ## Architecture rules
 
@@ -85,3 +85,9 @@ The application must not execute Python and must not expose OpenQASM, circuit co
 - 2026-07-15: Added the English author, student, and host flows; Firebase session repository; lazy SVG graphic renderer; live outcome controls and histogram.
 - 2026-07-15: Chose a 2.3 kB lazy SVG adapter instead of `@microsoft/quantum-viz.js` because the required gate set is small and the third-party package has an older imperative API. The adapter boundary permits replacement later.
 - 2026-07-15: Moved source documentation to `documentation/`; Vite owns and replaces `docs/` as generated GitHub Pages output.
+- 2026-07-15: Added Google-protected instructor controls for `wslu42@gmail.com`.
+- 2026-07-15: Replaced arbitrary-circuit-first workflow with the ordered eleven-activity Quantum Circuit Foundations lesson; added preserved rounds, reveal states, expected-distribution comparison, and optional reflections.
+
+## Known limitations and next task
+
+Students remain anonymous and browser-local duplicate prevention is bypassable. Expected distributions are stored curriculum targets rather than simulator output. Bell states, hardware jobs, and automatic Composer verification remain out of scope. The recommended next task is optional anonymous-to-named student identity with server-enforced one-response records, without turning the lesson into a leaderboard.

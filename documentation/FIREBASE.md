@@ -2,29 +2,36 @@
 
 ```text
 sessions/{sessionId}/
-  experiment/
+  lesson/
+    lessonId
     title
-    instructions
-    circuitSource
-    circuit
-    updatedAt
-  round/
-    id
-    status: draft | open | closed
+    activeActivityId
+    activeRoundId
+    createdAt
+  activities/{activityId}/
+    id, sectionId, order, title, shortTitle
+    studentInstructions, circuitSource, circuit
+    expectedDistribution, conceptSummary
+  rounds/{roundId}/
+    id, activityId
+    status: draft | open | closed | revealed
     allowMultiple
-  counts/{outcome}: number
+    createdAt, openedAt?, closedAt?
+    counts/{outcome}: number
+  reflections/{reflectionId}/
+    id, roundId, text, createdAt
 ```
 
-Publishing replaces the current experiment, creates a new round identifier, sets the round to `draft`, and clears prior counts. Opening and closing responses only changes `round/status`. Student votes use a Realtime Database transaction.
+Activity snapshots make an existing class session reviewable even if a future application release changes its built-in template. Activating or repeating an activity creates a new round and changes only the active pointers; it never deletes history. Reset clears only the selected active round's counts.
 
-The browser stores a key containing the session and round IDs to enforce the default one-response-per-browser behavior. This is classroom friction, not authentication or a security boundary.
+## Legacy migration
 
-Firebase configuration is read from `VITE_FIREBASE_*` variables. The legacy project settings are fallback defaults so the existing deployment continues to work; deployments can override every value using `.env.example`.
+Loading Foundations uses a multi-location update that adds `lesson`, `activities`, and a first `rounds/{id}` node. It does not replace the session root, so legacy `experiment`, `round`, `counts`, or `config` nodes remain intact. Lesson clients ignore those legacy nodes. There is no automatic conversion of old aggregate counts because they do not contain enough activity/round metadata.
 
-## Security status
+## Security
 
-The Author and Host routes use Firebase Authentication with Google Sign-In and only admit the verified account `wslu42@gmail.com`. The database rules independently enforce the same account restriction for experiment, round, and count-reset writes. Anonymous students retain public read access and may only create a count at `1` or increment an existing count by exactly one.
+Google-authenticated, verified `wslu42@gmail.com` may write lesson metadata, activity snapshots, round controls, and resets. Anonymous students have public read access and may only create an outcome count at `1` or increment an existing numeric count by exactly one. Reflections are create-only, limited to 280 characters, and accepted only for a revealed round.
 
-Before deploying, enable Google in Firebase Console under **Authentication → Sign-in method**, ensure `wslu42.github.io` is listed under **Authentication → Settings → Authorized domains**, and publish `firebase.rules.json` from **Realtime Database → Rules**. A GitHub Pages deployment does not deploy Realtime Database rules.
+Enable Google in **Firebase Authentication → Sign-in method**, add `wslu42.github.io` to **Authorized domains**, and separately publish `firebase.rules.json` in **Realtime Database → Rules**. GitHub Pages does not deploy rules.
 
-The browser-storage vote marker remains classroom friction rather than an identity boundary. Anonymous students can clear local storage or call the public increment operation directly, so add per-student authentication before using response counts in an adversarial setting.
+Browser storage keys include the session and round ID. This reduces accidental duplicate responses but anonymous students can bypass it; student authentication is outside this task.

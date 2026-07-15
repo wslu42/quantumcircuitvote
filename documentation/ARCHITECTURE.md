@@ -1,30 +1,33 @@
 # Architecture
 
-## Data flow
+## Lesson data flow
 
-1. The author enters a title, instructions, and Qiskit-like DSL.
-2. The parser validates the DSL and creates a `CircuitModel`.
-3. The layout engine assigns operations to conflict-free columns.
-4. Text and graphic renderers consume the same model and layout.
-5. Publishing writes the experiment and a new round to Firebase Realtime Database.
-6. Student clients subscribe to the session, render the circuit, and submit outcomes.
-7. Host clients subscribe to aggregate counts and render a live distribution.
+1. `foundationsLesson.ts` defines two sections and eleven ordered activities as data.
+2. Each activity's DSL is parsed at module initialization into the canonical `CircuitModel`.
+3. Lesson validation checks unique IDs/order, output widths, and probability sums.
+4. An authenticated instructor initializes a non-destructive session, creating the first draft round for A1.
+5. The instructor selects activities or repeats one; each selection creates a new round while prior rounds remain addressable.
+6. Students subscribe to the active activity and round, manually reconstruct the static circuit, and transact one outcome only while the active round is open.
+7. Closing stops submissions. Revealing exposes observed counts, expected percentages, deviation, concept summaries, and optional reflection.
 
 ## Modules
 
-- `src/circuit`: domain types, parser, scheduling, renderers, outcomes, and examples.
-- `src/firebase`: Firebase initialization and the session repository.
-- `src/components`: reusable presentation and interaction components.
-- `src/pages`: author, student, and host workflows.
+- `src/circuit`: whitelist parser, canonical circuit types, scheduling, outcomes, and text/SVG rendering adapters.
+- `src/lessons`: lesson/activity/round types, built-in Foundations data, progression, validation, reflection, and review calculations.
+- `src/firebase`: Firebase initialization, legacy repository, and the lesson repository with preserved rounds.
+- `src/components`: circuit preview, outcome controls, teacher authentication, and observed-versus-expected comparison.
+- `src/pages`: merged Instructor workflow and Student workflow. Legacy `author` and `host` hashes both resolve to Instructor.
 
-## Rendering strategy
+## State machine
 
-Text view is the default and has no visualization dependency. Graphic view is a lazy-loaded, read-only SVG renderer. Its adapter owns renderer-specific conversion so the domain model remains stable and a different graphic library can be introduced without changing the parser or pages.
+```text
+draft → open → closed → revealed
+```
 
-## Routing
+An instructor may reveal a draft/closed round, reopen when appropriate, or repeat the activity as a distinct draft round. Student submissions require both `lesson.activeRoundId` equality and `round.status === open`. Expected data and concepts render only for `revealed` rounds.
 
-The app uses hash routes and reads the shared session code from the hash query. This works on GitHub Pages without server-side rewrites.
+## Rendering and deployment
 
-## Deployment
+Text remains the default dependency-free view. Graphic rendering is lazy and read-only. Both consume the same `CircuitModel`; expected distributions never come from a simulator.
 
-Vite builds to `docs/` for compatibility with the repository's existing GitHub Pages configuration. `docs/` contains generated files only; maintainable source documentation lives in `documentation/`.
+Hash routing avoids server rewrites on GitHub Pages. Vite builds generated assets into `docs/`; maintainable documentation remains in `documentation/`.
