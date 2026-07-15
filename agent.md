@@ -34,3 +34,7 @@ The application must not execute Python and must not expose OpenQASM, circuit co
 ## Maintenance log
 
 - 2026-07-15: Legacy baseline tagged at `863b900`; feature work started.
+- 2026-07-15: Added the strict DSL parser, conflict-free layout engine, compact text renderer, and core tests.
+- 2026-07-15: Added the English author, student, and host flows; Firebase session repository; lazy SVG graphic renderer; live outcome controls and histogram.
+- 2026-07-15: Chose a 2.3 kB lazy SVG adapter instead of `@microsoft/quantum-viz.js` because the required gate set is small and the third-party package has an older imperative API. The adapter boundary permits replacement later.
+- 2026-07-15: Moved source documentation to `documentation/`; Vite owns and replaces `docs/` as generated GitHub Pages output.
