@@ -6,7 +6,7 @@ const instructions = 'Rebuild this circuit in IBM Quantum Composer, run one shot
 function activity(id: string, sectionId: string, order: number, title: string, shortTitle: string, circuitSource: string, expectedDistribution: ExpectedDistribution, conceptSummary: string[], reviewNotes?: string[]): LessonActivity {
   const parsed = parseCircuitDsl(circuitSource)
   if (!parsed.ok) throw new Error(`Built-in activity ${id} is invalid: ${parsed.errors.map((error) => error.message).join(', ')}`)
-  return { id, sectionId, order, title, shortTitle, studentInstructions: instructions, circuitSource, circuit: parsed.circuit, expectedDistribution, conceptSummary, reviewNotes }
+  return { id, sectionId, order, title, shortTitle, studentInstructions: instructions, circuitSource, circuit: parsed.circuit, expectedDistribution, conceptSummary, ...(reviewNotes ? { reviewNotes } : {}) }
 }
 
 const uniform = (bits: number): ExpectedDistribution => Object.fromEntries(Array.from({ length: 2 ** bits }, (_, value) => [value.toString(2).padStart(bits, '0'), 1 / (2 ** bits)]))
