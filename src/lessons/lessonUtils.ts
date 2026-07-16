@@ -24,6 +24,14 @@ export function canSubmitToRound(activeRoundId: string, round: LessonRound | nul
   return !!round && round.id === activeRoundId && round.status === 'open'
 }
 
+export type InstructorPrimaryAction = 'open' | 'reveal' | 'next' | 'complete'
+
+export function instructorPrimaryAction(status: LessonRound['status'], hasNextActivity: boolean): InstructorPrimaryAction {
+  if (status === 'draft') return 'open'
+  if (status === 'open' || status === 'closed') return 'reveal'
+  return hasNextActivity ? 'next' : 'complete'
+}
+
 export function validateReflection(text: string): string {
   const normalized = text.trim()
   if (!normalized) throw new Error('Reflection cannot be empty.')

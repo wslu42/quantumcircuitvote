@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { outcomesFor } from '../circuit/outcomes'
 import { foundationsLesson } from './foundationsLesson'
-import { adjacentActivityId, canSubmitToRound, createLessonRound, orderedActivities, reviewDistribution, submissionStorageKey, validateLesson, validateReflection } from './lessonUtils'
+import { adjacentActivityId, canSubmitToRound, createLessonRound, instructorPrimaryAction, orderedActivities, reviewDistribution, submissionStorageKey, validateLesson, validateReflection } from './lessonUtils'
 
 const byId = (id: string) => foundationsLesson.activities.find((activity) => activity.id === id)!
 
@@ -68,6 +68,14 @@ describe('Quantum Circuit Foundations lesson', () => {
     expect(canSubmitToRound('round-1', round)).toBe(true)
     expect(canSubmitToRound('round-2', round)).toBe(false)
     expect(canSubmitToRound('round-1', { ...round, status: 'closed' })).toBe(false)
+  })
+
+  it('consolidates the instructor primary workflow by round state', () => {
+    expect(instructorPrimaryAction('draft', true)).toBe('open')
+    expect(instructorPrimaryAction('open', true)).toBe('reveal')
+    expect(instructorPrimaryAction('closed', true)).toBe('reveal')
+    expect(instructorPrimaryAction('revealed', true)).toBe('next')
+    expect(instructorPrimaryAction('revealed', false)).toBe('complete')
   })
 
   it('validates short non-empty reflections', () => {

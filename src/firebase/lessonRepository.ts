@@ -34,7 +34,14 @@ export async function activateActivity(sessionId: string, activityId: string): P
   const activity = snapshot.child(`activities/${activityId}`).val() as LessonActivity | null
   if (!activity) throw new Error('Activity not found in this lesson.')
   const round = createLessonRound(activityId)
-  await update(rootRef(sessionId), { 'lesson/activeActivityId': activityId, 'lesson/activeRoundId': round.id, [`rounds/${round.id}`]: round })
+  const changes: Record<string, unknown> = { 'lesson/activeActivityId': activityId, 'lesson/activeRoundId': round.id, [`rounds/${round.id}`]: round }
+  const activeRoundId = snapshot.child('lesson/activeRoundId').val() as string | null
+  const activeStatus = activeRoundId ? snapshot.child(`rounds/${activeRoundId}/status`).val() : null
+  if (activeRoundId && activeStatus === 'open') {
+    changes[`rounds/${activeRoundId}/status`] = 'closed'
+    changes[`rounds/${activeRoundId}/closedAt`] = Date.now()
+  }
+  await update(rootRef(sessionId), changes)
   return round.id
 }
 
