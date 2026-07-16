@@ -6,8 +6,8 @@ Each student reads a static Text or Graphic circuit, rebuilds it in a blank IBM 
 
 ## Primary workflow
 
-1. Open `#/author?session=DEMO`, sign in as the configured teacher, and load the Foundations lesson.
-2. Share `#/student?session=DEMO` with students.
+1. Open `#/author?session=FOUNDATIONS`, sign in as the configured teacher, and load the Foundations lesson.
+2. Share the site root or `#/student?session=FOUNDATIONS` with students. With no session parameter, the app joins `FOUNDATIONS` by default.
 3. Move through the ordered activities, opening and closing one response round per activity.
 4. Reveal observed-versus-expected results, repeat activities as new rounds, or review preserved prior rounds.
 5. Optionally collect a short post-reveal reflection.

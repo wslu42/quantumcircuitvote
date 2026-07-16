@@ -6,7 +6,7 @@ import { StudentPage } from './pages/StudentPage'
 
 type Route = 'author' | 'student' | 'host'
 function routeFromHash(): Route { const value = location.hash.split('?')[0].replace('#/', ''); return value === 'author' || value === 'host' ? value : 'student' }
-function sessionFromLocation(): string { const hashQuery = location.hash.split('?')[1] ?? ''; const value = new URLSearchParams(hashQuery || location.search).get('session') ?? 'DEMO'; try { return normalizeSessionId(value) } catch { return 'DEMO' } }
+function sessionFromLocation(): string { const hashQuery = location.hash.split('?')[1] ?? ''; const value = new URLSearchParams(hashQuery || location.search).get('session') ?? 'FOUNDATIONS'; try { return normalizeSessionId(value) } catch { return 'FOUNDATIONS' } }
 
 export default function App() {
   const [route, setRoute] = useState(routeFromHash)
