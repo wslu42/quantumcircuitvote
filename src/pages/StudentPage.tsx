@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CircuitPreview } from '../components/CircuitPreview'
+import { BlochSimulator } from '../components/BlochSimulator'
 import { DistributionComparison } from '../components/DistributionComparison'
 import { OutcomeSelector } from '../components/OutcomeSelector'
 import { submitLessonOutcome, submitReflection, subscribeLessonSession } from '../firebase/lessonRepository'
@@ -38,6 +39,7 @@ export function StudentPage({ sessionId }: { sessionId: string }) {
   const revealed = round.status === 'revealed'
   return <main className="single-column"><section className="hero"><span className="eyebrow">{session.lesson.title} · Student</span><p className="lesson-progress">Activity {index + 1} of {foundationsLesson.activities.length}<br />Section {section?.order === 1 ? 'A' : 'B'} · {section?.title}</p><h1>{activity.title}</h1><p className="lede">{activity.studentInstructions}</p><a className="primary link-button" href="https://quantum.cloud.ibm.com/composer" target="_blank" rel="noreferrer">Open IBM Quantum Composer ↗</a></section>
     <CircuitPreview circuit={activity.circuit} />
+    <BlochSimulator audience="student" />
     <section className="panel"><span className="eyebrow">Report one shot</span><h2>What did you observe?</h2><p>Report the bit string exactly as displayed by IBM Quantum Composer.</p><details><summary>How is the bit string ordered?</summary><p>Transcribe IBM Composer's displayed classical string without reversing it. In Qiskit-style display order, the highest-index classical bit appears at the left.</p></details><OutcomeSelector bitCount={activity.circuit.clbitCount} disabled={locked} onSelect={submit} />{round.status !== 'open' && <p className="notice">Responses are currently {round.status}.</p>}{alreadySubmitted && !round.allowMultiple && <p className="notice success">You already responded in this round.</p>}{message && <p className="notice">{message}</p>}</section>
     {revealed && <DistributionComparison counts={round.counts ?? {}} expectedDistribution={activity.expectedDistribution} />}
     {revealed && <section className="panel"><span className="eyebrow">What the distribution reveals</span><h2>Concept summary</h2><ul>{activity.conceptSummary.map((concept) => <li key={concept}>{concept}</li>)}</ul><label>What surprised you about the class result?<textarea maxLength={280} value={reflection} onChange={(event) => setReflection(event.target.value)} /></label><div className="actions"><button className="primary" disabled={!reflection.trim()} onClick={reflect}>Submit reflection</button><span>{reflection.length}/280</span></div></section>}
